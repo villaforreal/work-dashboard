@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Work Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --pop-clock: #06b6d4;
+            --pop-timer: #10b981;
+            --pop-break: #f59e0b;
+            --action-bg: #334155;
+            --modal-bg: rgba(0, 0, 0, 0.85);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            margin: 0;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+            padding-bottom: 80px; /* Space for the floating button */
+        }
+
+        /* Floating Action Button for Settings */
+        .fab-settings {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: var(--card-bg);
+            border: 2px solid #334155;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            z-index: 100;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .fab-settings:active { transform: scale(0.9); background: var(--action-bg); }
+
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 450px;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .col { display: flex; flex-direction: column; gap: 15px; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Clock */
+        #clock { font-size: clamp(2.8rem, 10vw, 3.5rem); font-weight: 800; color: var(--pop-clock); letter-spacing: 1px; line-height: 1; }
+        .am-pm { font-size: 1.2rem; font-weight: 600; color: var(--text-muted); margin-left: 5px; }
+        #date { color: var(--text-muted); font-size: 1rem; margin-top: 8px; }
+
+        /* Timer */
+        #timer-display { font-size: clamp(3.5rem, 12vw, 4.5rem); font-weight: 700; color: var(--pop-timer); margin: 10px 0; transition: transform 0.2s, text-shadow 0.3s; line-height: 1; }
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 15px; }
+        
+        button { 
+            padding: 14px 12px;
+            border-radius: 10px; border: none; background: var(--action-bg); color: var(--text-main); 
+            font-size: 1rem; font-weight: 600; cursor: pointer; flex: 1 1 45%; 
+        }
+        button:active { transform: scale(0.96); }
+        .btn-work { background: #059669; }
+        .btn-break { background: #d97706; }
+        .btn-focus { background: #4f46e5; flex: 1 1 100%; margin-top: 5px; }
+
+        /* Progress Bar */
+        .progress-container { width: 100%; height: 8px; background: #334155; border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--pop-timer); width: 0%; transition: width 1s linear, background-color 0.5s; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); text-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+            50% { transform: scale(1.08); text-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+            100% { transform: scale(1); text-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .animate-pulse { animation: pulse 1s ease-in-out; }
+
+        /* Agenda */
+        #agenda-card { flex: 1; display: flex; flex-direction: column; max-height: 50vh; }
+        #agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 10px; }
+        #agenda-header h3 { margin: 0; font-size: 1.1rem; }
+        .auth-btn { background: #ea4335; color: white; padding: 8px 12px; font-size: 0.85rem; border-radius: 8px; flex: none; width: auto; }
+        #agenda-list { list-style: none; padding: 0; margin: 0; text-align: left; overflow-y: auto; flex: 1; }
+        .agenda-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #334155; }
+        .agenda-time { color: var(--pop-clock); font-weight: bold; font-size: 0.9rem; min-width: 75px; }
+        .agenda-title { color: var(--text-main); font-size: 0.95rem; text-align: right; word-break: break-word; }
+        .no-events { color: var(--text-muted); font-style: italic; margin-top: 15px; }
+
+        /* Settings Modal */
+        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-bg); justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 16px; width: 100%; max-width: 400px; text-align: left; max-height: 90vh; overflow-y: auto; }
+        .modal-content h3 { margin-top: 0; color: var(--pop-clock); font-size: 1.5rem; }
+        .setting-group { margin-bottom: 25px; }
+        .setting-group label { display: block; margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; }
+        input[type=range] { width: 100%; height: 6px; accent-color: var(--pop-clock); }
+        .val-display { float: right; color: var(--text-main); font-weight: bold; }
+        .toggle-container { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 1.1rem; margin-bottom: 15px; }
+        input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--pop-clock); }
+        select { width: 100%; padding: 10px; background: var(--action-bg); color: var(--text-main); border: none; border-radius: 8px; font-size: 1rem; }
+        .close-btn { background: var(--pop-clock); color: #000; width: 100%; margin-top: 10px; padding: 15px; font-size: 1.1rem; }
+
+        /* Focus Mode */
+        body.focus-mode { --bg-color: #000000; --card-bg: #09090b; }
+        body.focus-mode .fab-settings, body.focus-mode #agenda-card { display: none; }
+        body.focus-mode #clock { color: #334155; }
+        body.focus-mode .btn-focus { background: #e11d48; color: white; }
+
+        /* Landscape Mode */
+        @media screen and (orientation: landscape) and (min-width: 600px) {
+            .dashboard-container { flex-direction: row; max-width: 900px; height: 85vh; }
+            .col-left { flex: 1.2; display: flex; flex-direction: column; gap: 15px; }
+            .col-right { flex: 1; display: flex; flex-direction: column; }
+            #agenda-card { max-height: none; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="fab-settings" onclick="toggleSettings()">⚙️</button>
+
+    <div class="dashboard-container">
+        <div class="col col-left">
+            <div class="card" id="clock-card">
+                <div id="clock">00:00</div>
+                <div id="date">Loading date...</div>
+            </div>
+
+            <div class="card" id="timer-card">
+                <div id="timer-display">25:00</div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="controls">
+                    <button class="btn-work" id="btn-start-work" onclick="setTimer(customWorkMins, 'work')">25m Sprint</button>
+                    <button class="btn-break" onclick="setTimer(5, 'break')">5m Break</button>
+                    <button onclick="startTimer()">Start / Pause</button>
+                    <button onclick="resetTimer()">Reset</button>
+                    <button class="btn-focus" id="focus-toggle" onclick="toggleFocusMode()">Enter Deep Focus</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col col-right">
+            <div class="card" id="agenda-card">
+                <div id="agenda-header">
+                    <h3>Today's Schedule</h3>
+                    <button class="auth-btn" id="authorize_button" onclick="handleAuthClick()">Connect GCal</button>
+                    <button class="auth-btn" id="signout_button" onclick="handleSignoutClick()" style="display: none; background: #334155;">Disconnect</button>
+                </div>
+                <ul id="agenda-list">
+                    <div class="no-events">Connect your calendar to see today's events.</div>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal">
+        <div class="modal-content">
+            <h3>Settings</h3>
+            <div class="setting-group">
+                <label>Sprint Duration <span class="val-display" id="sprint-val">25 min</span></label>
+                <input type="range" id="sprint-slider" min="1" max="60" value="25" oninput="updateSprintSetting(this.value)">
+            </div>
+            <div class="setting-group">
+                <label>Chime Volume <span class="val-display" id="vol-val">50%</span></label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="updateVolumeSetting(this.value)">
+            </div>
+            
+            <div class="setting-group toggle-container">
+                <label for="format-toggle" style="margin:0;">24-Hour Clock</label>
+                <input type="checkbox" id="format-toggle" onchange="toggleClockFormat(this.checked)">
+            </div>
+
+            <div class="setting-group">
+                <label>Time Zone Override</label>
+                <select id="timezone-select" onchange="updateTimezone(this.value)">
+                    <option value="auto">Auto (Device Local)</option>
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                </select>
+            </div>
+
+            <button class="close-btn" onclick="toggleSettings()">Save & Close</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SETTINGS & CLOCK ---
+        let customWorkMins = 25; let chimeVolume = 0.5; let is24Hour = false; let selectedTimeZone = 'auto';
+        
+        function toggleSettings() { const m = document.getElementById('settings-modal'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
+        
+        function updateSprintSetting(val) { 
+            customWorkMins = parseInt(val); 
+            document.getElementById('sprint-val').textContent = val + ' min'; 
+            document.getElementById('btn-start-work').textContent = val + 'm Sprint'; 
+            if(!isRunning && currentMode === 'work') setTimer(customWorkMins, 'work'); 
+        }
+        
+        function updateVolumeSetting(val) { chimeVolume = parseFloat(val); document.getElementById('vol-val').textContent = Math.round(val * 100) + '%'; }
+        function toggleClockFormat(isChecked) { is24Hour = isChecked; updateClock(); }
+        function updateTimezone(val) { selectedTimeZone = val; updateClock(); }
+
+        function updateClock() { 
+            const now = new Date(); 
+            const timeOptions = { hour: 'numeric', minute:'2-digit', hour12: !is24Hour };
+            const dateOptions = { weekday: 'long', month: 'short', day: 'numeric' };
+            
+            if (selectedTimeZone !== 'auto') {
+                timeOptions.timeZone = selectedTimeZone;
+                dateOptions.timeZone = selectedTimeZone;
+            }
+
+            // Extract time string and manually style AM/PM if in 12-hour mode
+            let timeString = now.toLocaleTimeString('en-US', timeOptions);
+            if (!is24Hour) {
+                // Splits "10:30 PM" into "10:30" and "PM"
+                const parts = timeString.split(' ');
+                if (parts.length > 1) {
+                    document.getElementById('clock').innerHTML = `${parts[0]}<span class="am-pm">${parts[1]}</span>`;
+                } else {
+                    document.getElementById('clock').innerHTML = timeString;
+                }
+            } else {
+                document.getElementById('clock').textContent = timeString;
+            }
+
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', dateOptions); 
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        function playChime() { if(chimeVolume===0)return; const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 1); gain.gain.setValueAtTime(chimeVolume, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5); osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 1.5); }
+
+        // --- 2. HIGH-DOPAMINE TIMER ---
+        let timeLeft = 1500; let totalTime = 1500; let timerId = null; let isRunning = false; let currentMode = 'work';
+        const timerDisplay = document.getElementById('timer-display');
+        const progressBar = document.getElementById('progress-bar');
+        let milestones = { half: false, quarter: false, tenPercent: false };
+
+        function updateTimerDisplay() {
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            let percentDone = ((totalTime - timeLeft) / totalTime) * 100;
+            progressBar.style.width = `${percentDone}%`;
+
+            if (currentMode === 'work') {
+                if (timeLeft <= totalTime * 0.5 && !milestones.half) { triggerPizazz(); milestones.half = true; } 
+                else if (timeLeft <= totalTime * 0.25 && !milestones.quarter) { triggerPizazz(); progressBar.style.backgroundColor = "var(--pop-break)"; milestones.quarter = true; } 
+                else if (timeLeft <= totalTime * 0.10 && !milestones.tenPercent) { triggerPizazz(); timerDisplay.style.color = "#ef4444"; progressBar.style.backgroundColor = "#ef4444"; milestones.tenPercent = true; }
+            }
+        }
+
+        function triggerPizazz() {
+            timerDisplay.classList.remove('animate-pulse');
+            void timerDisplay.offsetWidth; 
+            timerDisplay.classList.add('animate-pulse');
+            playChime();
+        }
+
+        function setTimer(minutes, mode) {
+            clearInterval(timerId); isRunning = false;
+            totalTime = minutes * 60; timeLeft = totalTime;
+            currentMode = mode;
+            timerDisplay.style.color = mode === 'work' ? 'var(--pop-timer)' : 'var(--pop-break)';
+            progressBar.style.backgroundColor = mode === 'work' ? 'var(--pop-timer)' : 'var(--pop-break)';
+            progressBar.style.width = '0%';
+            milestones = { half: false, quarter: false, tenPercent: false };
+            updateTimerDisplay();
+        }
+
+        function startTimer() {
+            if(!window.AudioContext) window.AudioContext = window.webkitAudioContext;
+            if (isRunning) { clearInterval(timerId); isRunning = false; return; }
+            isRunning = true;
+            timerId = setInterval(() => {
+                if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); } 
+                else { clearInterval(timerId); isRunning = false; playChime(); setTimeout(playChime, 500); alert(currentMode === 'work' ? "Focus session complete! Time for a break." : "Break is over! Let's get back to work."); }
+            }, 1000);
+        }
+        function resetTimer() { setTimer(currentMode === 'work' ? customWorkMins : 5, currentMode); }
+
+        // --- 3. FOCUS MODE ---
+        let focusModeActive = false;
+        function toggleFocusMode() { focusModeActive = !focusModeActive; document.body.classList.toggle('focus-mode'); document.getElementById('focus-toggle').textContent = focusModeActive ? "Exit Deep Focus" : "Enter Deep Focus"; }
+
+        // --- 4. GOOGLE CALENDAR API LOGIC ---
+        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; 
+        const API_KEY = 'YOUR_API_KEY_HERE';
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+
+        let tokenClient; let gapiInited = false; let gisInited = false; let eventsList = [];
+
+        function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+        async function initializeGapiClient() { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); gapiInited = true; maybeEnableButtons(); }
+        function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '', }); gisInited = true; maybeEnableButtons(); }
+        function maybeEnableButtons() { if (gapiInited && gisInited) { document.getElementById('authorize_button').style.display = 'block'; } }
+
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) { throw (resp); }
+                document.getElementById('signout_button').style.display = 'block';
+                document.getElementById('authorize_button').style.display = 'none';
+                await listTodayEvents();
+            };
+            if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({prompt: 'consent'}); } 
+            else { tokenClient.requestAccessToken({prompt: ''}); }
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); }
+            document.getElementById('agenda-list').innerHTML = '<div class="no-events">Calendar disconnected.</div>';
+            document.getElementById('authorize_button').style.display = 'block';
+            document.getElementById('signout_button').style.display = 'none';
+        }
+
+        async function listTodayEvents() {
+            const listEl = document.getElementById('agenda-list');
+            listEl.innerHTML = '<div class="no-events">Loading...</div>';
+            
+            const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+            const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
+
+            try {
+                const request = { 'calendarId': 'primary', 'timeMin': startOfDay.toISOString(), 'timeMax': endOfDay.toISOString(), 'showDeleted': false, 'singleEvents': true, 'orderBy': 'startTime', };
+                const response = await gapi.client.calendar.events.list(request);
+                eventsList = response.result.items;
+
+                if (!eventsList || eventsList.length === 0) { listEl.innerHTML = '<div class="no-events">No meetings today!</div>'; return; }
+
+                listEl.innerHTML = '';
+                eventsList.forEach(event => {
+                    const start = event.start.dateTime || event.start.date;
+                    const dateObj = new Date(start);
+                    const timeString = event.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'All Day';
+                    listEl.innerHTML += `<li class="agenda-item"><span class="agenda-time">${timeString}</span><span class="agenda-title">${event.summary}</span></li>`;
+                });
+
+                setInterval(checkNextMeeting, 60000);
+            } catch (err) { listEl.innerHTML = `<div class="no-events" style="color:red;">Error fetching events.</div>`; }
+        }
+
+        let notifiedEvents = new Set();
+        function checkNextMeeting() {
+            const now = new Date();
+            eventsList.forEach(event => {
+                if (!event.start.dateTime) return;
+                const meetingTime = new Date(event.start.dateTime);
+                const diffMs = meetingTime - now;
+                const diffMins = Math.floor(diffMs / 60000);
+
+                if (diffMins === 10 && !notifiedEvents.has(event.id)) {
+                    playChime(); setTimeout(playChime, 500);
+                    alert(`Upcoming Meeting in 10 minutes: ${event.summary}`);
+                    notifiedEvents.add(event.id);
+                }
+            });
+        }
+    </script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
