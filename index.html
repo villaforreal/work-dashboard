@@ -106,12 +106,14 @@
         body.focus-mode #clock { color: #334155; }
         body.focus-mode .btn-focus { background: #e11d48; color: white; }
 
-        /* --- MOBILE LANDSCAPE OPTIMIZATION --- */
+/* --- MOBILE LANDSCAPE OPTIMIZATION --- */
         @media screen and (orientation: landscape) {
             body { 
                 padding: 10px; 
                 padding-bottom: 10px; 
-                height: 100vh; 
+                /* Use dynamic viewport height to account for Safari toolbars */
+                height: 100dvh; 
+                min-height: -webkit-fill-available;
                 overflow: hidden; 
                 justify-content: center;
             }
@@ -132,28 +134,12 @@
             .controls { margin-top: 10px; }
             
             #agenda-card { height: 100%; max-height: 100%; flex: 1; }
-            #agenda-list { max-height: calc(100vh - 120px); overflow-y: auto; }
+            /* Update to dvh here as well */
+            #agenda-list { max-height: calc(100dvh - 120px); overflow-y: auto; }
             
-            /* Shrink the settings button and hide the footer to save vertical space */
             .fab-settings { bottom: 15px; right: 15px; width: 45px; height: 45px; font-size: 1.2rem; }
             footer { display: none; } 
         }
-        footer {
-            margin-top: 30px;
-            padding: 20px;
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            border-top: 1px solid #334155;
-            width: 100%;
-            max-width: 450px;
-        }
-        footer a {
-            color: var(--pop-clock);
-            text-decoration: none;
-            margin: 0 10px;
-        }
-        footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
