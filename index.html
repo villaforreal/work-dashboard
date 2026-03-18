@@ -106,11 +106,37 @@
         body.focus-mode #clock { color: #334155; }
         body.focus-mode .btn-focus { background: #e11d48; color: white; }
 
-        @media screen and (orientation: landscape) and (min-width: 600px) {
-            .dashboard-container { flex-direction: row; max-width: 900px; height: 85vh; }
-            .col-left { flex: 1.2; display: flex; flex-direction: column; gap: 15px; }
+        /* --- MOBILE LANDSCAPE OPTIMIZATION --- */
+        @media screen and (orientation: landscape) {
+            body { 
+                padding: 10px; 
+                padding-bottom: 10px; 
+                height: 100vh; 
+                overflow: hidden; 
+                justify-content: center;
+            }
+            .dashboard-container { 
+                flex-direction: row; 
+                max-width: 100%; 
+                height: 100%; 
+                gap: 15px; 
+                align-items: stretch;
+            }
+            .col-left { flex: 1.2; justify-content: center; }
             .col-right { flex: 1; display: flex; flex-direction: column; }
-            #agenda-card { max-height: none; height: 100%; }
+            
+            .card { padding: 15px; }
+            #clock { font-size: clamp(2rem, 5vw, 2.5rem); }
+            #timer-display { font-size: clamp(2.5rem, 8vw, 3.5rem); margin: 5px 0; }
+            button { padding: 10px; font-size: 0.9rem; }
+            .controls { margin-top: 10px; }
+            
+            #agenda-card { height: 100%; max-height: 100%; flex: 1; }
+            #agenda-list { max-height: calc(100vh - 120px); overflow-y: auto; }
+            
+            /* Shrink the settings button and hide the footer to save vertical space */
+            .fab-settings { bottom: 15px; right: 15px; width: 45px; height: 45px; font-size: 1.2rem; }
+            footer { display: none; } 
         }
         footer {
             margin-top: 30px;
