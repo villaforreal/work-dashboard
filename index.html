@@ -298,7 +298,7 @@
 
         // --- 4. GOOGLE CALENDAR API LOGIC ---
         const CLIENT_ID = '658181799757-l92q9qh8jeongbi9kjhmppba5ik4akdn.apps.googleusercontent.com'; 
-        const API_KEY = 'AIzaSyBJCSWFL5IQ4WIJYfFQwdHTxm1jMdMNjpE';
+        const API_KEY = 'AIzaSyDoegL1SrzwMMQeST3wN678j40xUeT5W7Y';
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
@@ -361,7 +361,6 @@
                     const start = event.start.dateTime || event.start.date;
                     const dateObj = new Date(start);
                     const timeString = event.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'All Day';
-                    // PATCH APPLIED HERE:
                     listEl.innerHTML += `<li class="agenda-item"><span class="agenda-time">${timeString}</span><span class="agenda-title">${escapeHTML(event.summary)}</span></li>`;
                 });
 
