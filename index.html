@@ -296,22 +296,55 @@
         let focusModeActive = false;
         function toggleFocusMode() { focusModeActive = !focusModeActive; document.body.classList.toggle('focus-mode'); document.getElementById('focus-toggle').textContent = focusModeActive ? "Exit Deep Focus" : "Enter Deep Focus"; }
 
-        // --- 4. GOOGLE CALENDAR API LOGIC ---
+// --- 4. GOOGLE CALENDAR API LOGIC ---
         const CLIENT_ID = '658181799757-l92q9qh8jeongbi9kjhmppba5ik4akdn.apps.googleusercontent.com'; 
         const API_KEY = 'AIzaSyDoegL1SrzwMMQeST3wN678j40xUeT5W7Y';
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
         let tokenClient; let gapiInited = false; let gisInited = false; let eventsList = [];
+        let autoSyncInterval = null;
 
         function gapiLoaded() { gapi.load('client', initializeGapiClient); }
-        async function initializeGapiClient() { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); gapiInited = true; maybeEnableButtons(); }
-        function gisLoaded() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '', }); gisInited = true; maybeEnableButtons(); }
-        function maybeEnableButtons() { if (gapiInited && gisInited) { document.getElementById('authorize_button').style.display = 'block'; } }
+        async function initializeGapiClient() { 
+            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] }); 
+            gapiInited = true; maybeEnableButtons(); 
+        }
+        function gisLoaded() { 
+            tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '', }); 
+            gisInited = true; maybeEnableButtons(); 
+        }
+
+        function maybeEnableButtons() { 
+            if (gapiInited && gisInited) { 
+                // Check if we have a valid token saved in the browser's memory
+                const savedToken = localStorage.getItem('gcal_token');
+                const expiry = localStorage.getItem('gcal_token_expiry');
+                const now = new Date().getTime();
+
+                if (savedToken && expiry && now < parseInt(expiry)) {
+                    // Token is still good! Auto-reconnect.
+                    gapi.client.setToken({ access_token: savedToken });
+                    document.getElementById('signout_button').style.display = 'block';
+                    document.getElementById('authorize_button').style.display = 'none';
+                    listTodayEvents();
+                } else {
+                    // No valid token, show the connect button
+                    localStorage.removeItem('gcal_token');
+                    localStorage.removeItem('gcal_token_expiry');
+                    document.getElementById('authorize_button').style.display = 'block'; 
+                }
+            } 
+        }
 
         function handleAuthClick() {
             tokenClient.callback = async (resp) => {
                 if (resp.error !== undefined) { throw (resp); }
+                
+                // Save the "Access Badge" and its expiration time (usually 1 hour) to browser memory
+                localStorage.setItem('gcal_token', resp.access_token);
+                localStorage.setItem('gcal_token_expiry', new Date().getTime() + (resp.expires_in * 1000));
+                
                 document.getElementById('signout_button').style.display = 'block';
                 document.getElementById('authorize_button').style.display = 'none';
                 await listTodayEvents();
@@ -323,28 +356,29 @@
         function handleSignoutClick() {
             const token = gapi.client.getToken();
             if (token !== null) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); }
+            
+            // Wipe memory
+            localStorage.removeItem('gcal_token');
+            localStorage.removeItem('gcal_token_expiry');
+            clearInterval(autoSyncInterval);
+            
             document.getElementById('agenda-list').innerHTML = '<div class="no-events">Calendar disconnected.</div>';
             document.getElementById('authorize_button').style.display = 'block';
             document.getElementById('signout_button').style.display = 'none';
         }
 
-        // SECURITY PATCH: Sanitizes event titles to prevent XSS attacks
         function escapeHTML(str) {
             if (!str) return 'No Title';
-            return str.replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag] || tag)
-            );
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
         }
 
         async function listTodayEvents() {
             const listEl = document.getElementById('agenda-list');
-            listEl.innerHTML = '<div class="no-events">Loading...</div>';
+            
+            // Only show loading text if it's the very first time loading, otherwise update silently
+            if (eventsList.length === 0) {
+                listEl.innerHTML = '<div class="no-events">Loading...</div>';
+            }
             
             const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
             const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
@@ -354,18 +388,31 @@
                 const response = await gapi.client.calendar.events.list(request);
                 eventsList = response.result.items;
 
-                if (!eventsList || eventsList.length === 0) { listEl.innerHTML = '<div class="no-events">No meetings today!</div>'; return; }
+                if (!eventsList || eventsList.length === 0) { 
+                    listEl.innerHTML = '<div class="no-events">No meetings today!</div>'; 
+                } else {
+                    let newHTML = '';
+                    eventsList.forEach(event => {
+                        const start = event.start.dateTime || event.start.date;
+                        const dateObj = new Date(start);
+                        const timeString = event.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'All Day';
+                        newHTML += `<li class="agenda-item"><span class="agenda-time">${timeString}</span><span class="agenda-title">${escapeHTML(event.summary)}</span></li>`;
+                    });
+                    listEl.innerHTML = newHTML;
+                }
 
-                listEl.innerHTML = '';
-                eventsList.forEach(event => {
-                    const start = event.start.dateTime || event.start.date;
-                    const dateObj = new Date(start);
-                    const timeString = event.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'All Day';
-                    listEl.innerHTML += `<li class="agenda-item"><span class="agenda-time">${timeString}</span><span class="agenda-title">${escapeHTML(event.summary)}</span></li>`;
-                });
+                // Start checking for 10-min warnings and auto-refreshing the calendar every 5 minutes
+                setInterval(checkNextMeeting, 60000); 
+                
+                if (!autoSyncInterval) {
+                    autoSyncInterval = setInterval(listTodayEvents, 300000); // 300,000ms = 5 minutes
+                }
 
-                setInterval(checkNextMeeting, 60000);
-            } catch (err) { listEl.innerHTML = `<div class="no-events" style="color:red;">Error fetching events.</div>`; }
+            } catch (err) { 
+                console.error("Calendar sync error", err);
+                // If it fails (like the 1-hour token expired), log out to be safe
+                if (err.status === 401) { handleSignoutClick(); }
+            }
         }
 
         let notifiedEvents = new Set();
