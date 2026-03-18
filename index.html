@@ -106,8 +106,17 @@
         body.focus-mode #clock { color: #334155; }
         body.focus-mode .btn-focus { background: #e11d48; color: white; }
 
-/* --- MOBILE LANDSCAPE OPTIMIZATION --- */
-        @media screen and (orientation: landscape) and (max-height: 600px) {
+/* --- 1. DESKTOP / LARGE SCREEN MODE (Web App) --- */
+        @media screen and (min-width: 768px) and (min-height: 501px) {
+            .dashboard-container { flex-direction: row; max-width: 900px; height: 85vh; }
+            .col-left { flex: 1.2; justify-content: center; }
+            .col-right { flex: 1; display: flex; flex-direction: column; }
+            #agenda-card { height: 100%; max-height: none; }
+            #agenda-list { flex: 1; overflow-y: auto; }
+        }
+
+        /* --- 2. MOBILE LANDSCAPE MODE (Phone Sideways) --- */
+        @media screen and (orientation: landscape) and (max-height: 500px) {
             body { 
                 padding: 10px; 
                 height: 100dvh; 
@@ -120,31 +129,23 @@
                 height: calc(100dvh - 20px); 
                 gap: 10px; 
             }
-            
-            /* Allow the left side to scroll if it's still too tall */
             .col-left { 
                 flex: 1.2; 
                 gap: 10px; 
                 overflow-y: auto; 
                 padding-bottom: 5px;
             }
-            .col-right { 
-                flex: 1; 
-                overflow: hidden; 
-            }
+            .col-right { flex: 1; overflow: hidden; }
             
-            /* Shrink everything inside the bubbles */
             .card { padding: 12px; }
             #clock { font-size: 1.8rem; }
             #date { margin-top: 2px; font-size: 0.85rem; }
             #timer-display { font-size: 2.2rem; margin: 2px 0; }
             
-            /* Slimmer buttons */
             .controls { gap: 6px; margin-top: 8px; }
             button { padding: 8px; font-size: 0.85rem; border-radius: 8px; }
             .btn-focus { margin-top: 0px; }
             
-            /* Agenda constraints */
             #agenda-card { height: 100%; display: flex; flex-direction: column; }
             #agenda-header { padding-bottom: 5px; margin-bottom: 5px; }
             #agenda-header h3 { font-size: 1rem; }
