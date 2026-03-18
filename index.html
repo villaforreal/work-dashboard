@@ -106,37 +106,43 @@
         body.focus-mode #clock { color: #334155; }
         body.focus-mode .btn-focus { background: #e11d48; color: white; }
 
-/* 1. DESKTOP FIX: This makes buttons big on your monitor */
-        @media screen and (min-width: 769px) {
+/* --- MASTER LAYOUT: LANDSCAPE (Sideways Phone) --- */
+        /* This rule triggers whenever the screen is wider than it is tall */
+        @media screen and (orientation: landscape) {
+            body { 
+                padding: 10px; 
+                padding-bottom: env(safe-area-inset-bottom); /* Fixes iPhone Home Bar */
+                height: 100dvh; 
+                overflow: hidden; 
+            }
             .dashboard-container { 
-                flex-direction: row; 
+                flex-direction: row !important; /* Forces the split-screen bubbles */
+                max-width: 100%; 
+                height: calc(100dvh - 20px - env(safe-area-inset-bottom)); 
+                gap: 15px; 
+            }
+            .col-left { flex: 1.2; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
+            .col-right { flex: 1; display: flex; flex-direction: column; }
+            #agenda-card { height: 100%; }
+            
+            /* Sizing for Phone Landscape */
+            #clock { font-size: 1.8rem; }
+            #timer-display { font-size: 2.5rem; margin: 5px 0; }
+            button { padding: 10px; font-size: 0.9rem; }
+            footer { display: none; }
+        }
+
+        /* --- MASTER LAYOUT: DESKTOP (Big Monitors) --- */
+        /* This makes the buttons huge again on your computer */
+        @media screen and (min-width: 1024px) {
+            .dashboard-container { 
                 max-width: 1000px; 
-                height: 85vh; 
+                height: 80vh; 
                 gap: 30px; 
             }
             #clock { font-size: 3.5rem; }
             #timer-display { font-size: 5rem; }
-            button { padding: 18px; font-size: 1.2rem; }
-            #agenda-card { height: 100%; }
-        }
-
-        /* 2. IPHONE FIX: This stops the cutoff on your Home Screen */
-        @media screen and (display-mode: standalone) and (orientation: landscape) {
-            body { 
-                padding: 10px;
-                padding-bottom: env(safe-area-inset-bottom); 
-                height: 100vh;
-            }
-            .dashboard-container { 
-                height: calc(100vh - env(safe-area-inset-bottom) - 20px);
-                flex-direction: row;
-                gap: 15px;
-            }
-            .col-left { overflow-y: auto; flex: 1.1; }
-            #clock { font-size: 2rem; }
-            #timer-display { font-size: 2.8rem; }
-            button { padding: 12px; font-size: 1rem; }
-            footer { display: none; }
+            button { padding: 20px; font-size: 1.3rem; }
         }
     </style>
     </style>
